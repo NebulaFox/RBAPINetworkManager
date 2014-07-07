@@ -1,9 +1,8 @@
 //
 //  RBAPIPoller.m
-//  TecniqTV
 //
 //  Created by Robbie Bykowski on 05/07/2014.
-//  Copyright (c) 2014 Somewhat. All rights reserved.
+//  Copyright (c) 2014 HeliumEnd. All rights reserved.
 //
 
 #import "RBAPIPoller.h"
@@ -25,6 +24,7 @@
     {
         self.polling = NO;
         self.finished = YES;
+        self.completionBlocks = @[];
     }
     return self;
 }
@@ -34,7 +34,7 @@
     NSAssert(self.method != nil, @"Cannot start polling - method cannot be nil ");
     NSAssert(self.urlString != nil, @"Cannot start polling - urlString cannot be nil");
     NSAssert(self.interval != 0, @"Cannot start polling - interval cannot be 0");
-    NSAssert(self.interval < 0, @"Cannot start polling - interval cannot be negative");
+    NSAssert(self.interval > 0, @"Cannot start polling - interval cannot be negative");
     NSAssert(self.networkManager != nil, @"Cannot start polling - network manager cannot be nil");
     
     self.polling = YES;
@@ -57,10 +57,20 @@
             obj(successful, responseObject, error);
     }];
     
-    if (self.timer != nil)
+    if (self.isPolling)
     {
         [self.timer invalidate];
         self.timer = [self _timerForPolling];
+    }
+    else
+    {
+        if (self.timer != nil)
+        {
+            [self.timer invalidate];
+            self.timer = nil;
+            
+            self.finished = YES;
+        }
     }
 }
 
@@ -70,18 +80,6 @@
     [that.networkManager requestByMethod:that.method at:that.urlString parameters:that.parameters bypassPolling:YES  completion:^(BOOL successful, id responseObject, NSError * error)
     {
         [that fireCompletionsWithSuccessful:successful responseObject:responseObject error:error];
-    
-        if (that.isPolling)
-        {
-            that.timer = [self _timerForPolling];
-        }
-        else
-        {
-            [that.timer invalidate];
-            that.timer = nil;
-            
-            that.finished = YES;
-        }
     }];
 }
 

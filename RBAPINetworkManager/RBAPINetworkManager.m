@@ -96,7 +96,14 @@ static NSString * const RBAPICompletionBlockKey = @"completion";
 - (void)pollWithInterval:(NSTimeInterval)interval requests:(void (^)(void))requests
 {
     NSAssert(requests != nil, @"requests cannot be nil");
+    
+    if (self.pollingRequests == nil)
+    {
+        self.pollingRequests = [NSMutableArray new];
+    }
+    
     NSMutableArray * oldPollingRequests = self.pollingRequests;
+    dispatch_semaphore_t seamphore = dispatch_semaphore_create(0);
     
     __weak typeof(self) that = self;
     dispatch_barrier_async(that.queue, ^{
@@ -106,33 +113,38 @@ static NSString * const RBAPICompletionBlockKey = @"completion";
     
     dispatch_async(that.queue, ^{
         requests();
+        
+        dispatch_barrier_async(that.queue, ^{
+            NSMutableArray * pollingRequests = that.pollingRequests;
+            that.pollingRequests = oldPollingRequests;
+            that.creatingPollingRequests = NO;
+            
+            [pollingRequests enumerateObjectsUsingBlock:^(RBAPIPoller * obj, NSUInteger idx, BOOL *stop) {
+                RBAPIPoller * poller = [that _pollerForRequestByMethod:obj.method at:obj.urlString];
+                
+                if (poller != nil)
+                {
+                    poller.parameters = obj.parameters;
+                    [poller stop];
+                }
+                else
+                {
+                    poller = obj;
+                    [that.pollingRequests addObject:poller];
+                }
+                
+                poller.interval = interval;
+                poller.networkManager = that;
+                
+                [poller start];
+            }];
+            
+            dispatch_semaphore_signal(seamphore);
+        });
     });
     
-    dispatch_barrier_async(that.queue, ^{
-        NSMutableArray * pollingRequests = that.pollingRequests;
-        that.pollingRequests = oldPollingRequests;
-        that.creatingPollingRequests = NO;
-        
-        [pollingRequests enumerateObjectsUsingBlock:^(RBAPIPoller * obj, NSUInteger idx, BOOL *stop) {
-            RBAPIPoller * poller = [that _pollerForRequestByMethod:obj.method at:obj.urlString];
-            
-            if (poller != nil)
-            {
-                poller.parameters = obj.parameters;
-                [poller stop];
-            }
-            else
-            {
-                poller = obj;
-                [that.pollingRequests addObject:poller];
-            }
-            
-            poller.interval = interval;
-            poller.networkManager = that;
-            
-            [poller start];
-        }];
-    });
+    dispatch_semaphore_wait(seamphore, DISPATCH_TIME_FOREVER);
+    
 }
 
 - (RBAPIPoller *)_pollerForRequestByMethod:(NSString *)method at:(NSString *)urlString parameters:(NSDictionary *)parameters bypassPolling:(BOOL)bypassPolling completion:(RBAPINetworkManagerCompletionBlock)completion

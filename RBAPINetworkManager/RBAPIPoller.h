@@ -1,9 +1,8 @@
 //
 //  RBAPIPoller.h
-//  TecniqTV
 //
 //  Created by Robbie Bykowski on 05/07/2014.
-//  Copyright (c) 2014 Somewhat. All rights reserved.
+//  Copyright (c) 2014 HeliumEnd. All rights reserved.
 //
 
 #import "RBAPINetworkManager.h"
