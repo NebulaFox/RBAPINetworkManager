@@ -15,7 +15,7 @@ FOUNDATION_EXPORT NSString * const RBAPINetworkManagerMethodDELETE;
 
 @class RBAPINetworkManager;
 
-typedef void (^RBAPINetworkManagerCompletionBlock)(BOOL successful, id responseObj, NSError * error);
+typedef void (^RBAPINetworkManagerCompletionBlock)(BOOL successful, NSURLResponse * response, id responseObj, NSError * error);
 
 @interface RBAPINetworkManager : AFHTTPSessionManager
 
@@ -30,6 +30,8 @@ typedef void (^RBAPINetworkManagerCompletionBlock)(BOOL successful, id responseO
  WARNING: ignores completion blocks
  */
 - (void)pollWithInterval:(NSTimeInterval)interval requests:(void (^)(void))requests;
+- (void)startPollingRequests;
+
 - (void)addPollingWithInterval:(NSTimeInterval)interval forRequestByMethod:(NSString *)method at:(NSString *)urlString parameters:(NSDictionary *)parameters;
 - (void)removePollingForRequestByMethod:(NSString *)method at:(NSString *)urlString;
 - (void)startPollingRequestByMethod:(NSString *)method at:(NSString *)urlString;

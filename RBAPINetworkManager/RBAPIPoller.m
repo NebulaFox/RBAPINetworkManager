@@ -51,10 +51,10 @@
     self.polling = NO;
 }
 
-- (void)fireCompletionsWithSuccessful:(BOOL)successful responseObject:(id)responseObject error:(NSError *)error
+- (void)fireCompletionsWithSuccessful:(BOOL)successful response:(NSURLResponse *)response responseObject:(id)responseObject error:(NSError *)error
 {
     [self.completionBlocks enumerateObjectsUsingBlock:^(RBAPINetworkManagerCompletionBlock obj, NSUInteger idx, BOOL *stop) {
-            obj(successful, responseObject, error);
+            obj(successful, response, responseObject, error);
     }];
     
     if (self.isPolling)
@@ -77,9 +77,9 @@
 - (void)_poll
 {
     __weak typeof(self) that = self;
-    [that.networkManager requestByMethod:that.method at:that.urlString parameters:that.parameters bypassPolling:YES  completion:^(BOOL successful, id responseObject, NSError * error)
+    [that.networkManager requestByMethod:that.method at:that.urlString parameters:that.parameters bypassPolling:YES  completion:^(BOOL successful, NSURLResponse * response, id responseObject, NSError * error)
     {
-        [that fireCompletionsWithSuccessful:successful responseObject:responseObject error:error];
+        [that fireCompletionsWithSuccessful:successful response:response responseObject:responseObject error:error];
     }];
 }
 

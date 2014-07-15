@@ -21,6 +21,6 @@
 - (void)start;
 - (void)stop;
 
-- (void)fireCompletionsWithSuccessful:(BOOL)successful responseObject:(id)responseObject error:(NSError *)error;
+- (void)fireCompletionsWithSuccessful:(BOOL)successful response:(NSURLResponse *)response responseObject:(id)responseObject error:(NSError *)error;
 
 @end

@@ -55,8 +55,10 @@ static NSString * const RBAPICompletionBlockKey = @"completion";
 {
     __weak typeof(self) that = self;
     dispatch_async(that.queue, ^{
-        NSString * absURLString = [[self.baseURL absoluteString] stringByAppendingPathComponent:urlString];
-        NSMutableURLRequest * request = [self.requestSerializer requestWithMethod:method URLString:absURLString parameters:parameters];
+        NSString * relURLString = [[self.baseURL path] stringByAppendingPathComponent:urlString];
+        NSURL * absURL = [NSURL URLWithString:relURLString relativeToURL:self.baseURL.baseURL];
+        
+        NSMutableURLRequest * request = [self.requestSerializer requestWithMethod:method URLString:[absURL absoluteString] parameters:parameters];
         
         RBAPIPoller * poller = [self _pollerForRequestByMethod:method at:urlString parameters:parameters bypassPolling:bypassPolling completion:completion];
 
@@ -65,24 +67,24 @@ static NSString * const RBAPICompletionBlockKey = @"completion";
             {
                 if (completion != nil)
                 {
-                    completion(NO, nil, error);
+                    completion(NO, response, nil, error);
                 }
             
                 if (poller != nil)
                 {
-                    [poller fireCompletionsWithSuccessful:NO responseObject:nil error:error];
+                    [poller fireCompletionsWithSuccessful:NO response:response responseObject:nil error:error];
                 }
             }
             else
             {
                 if (completion != nil)
                 {
-                    completion(YES, responseObject, error);
+                    completion(YES, response, responseObject, error);
                 }
             
                 if (poller != nil)
                 {
-                    [poller fireCompletionsWithSuccessful:YES responseObject:responseObject error:error];
+                    [poller fireCompletionsWithSuccessful:YES response:response responseObject:responseObject error:error];
                 }
             }
         }];
@@ -135,8 +137,6 @@ static NSString * const RBAPICompletionBlockKey = @"completion";
                 
                 poller.interval = interval;
                 poller.networkManager = that;
-                
-                [poller start];
             }];
             
             dispatch_semaphore_signal(seamphore);
@@ -145,6 +145,16 @@ static NSString * const RBAPICompletionBlockKey = @"completion";
     
     dispatch_semaphore_wait(seamphore, DISPATCH_TIME_FOREVER);
     
+}
+
+- (void)startPollingRequests
+{
+    __weak typeof(self) that = self;
+    dispatch_async(that.queue, ^{
+        [that.pollingRequests enumerateObjectsUsingBlock:^(RBAPIPoller * obj, NSUInteger idx, BOOL *stop) {
+            [obj start];
+        }];
+    });
 }
 
 - (RBAPIPoller *)_pollerForRequestByMethod:(NSString *)method at:(NSString *)urlString parameters:(NSDictionary *)parameters bypassPolling:(BOOL)bypassPolling completion:(RBAPINetworkManagerCompletionBlock)completion
