@@ -37,18 +37,14 @@
     NSAssert(self.interval > 0, @"Cannot start polling - interval cannot be negative");
     NSAssert(self.networkManager != nil, @"Cannot start polling - network manager cannot be nil");
     
-    self.polling = YES;
-    
-    if (self.finished)
-    {
-        self.finished = NO;
-        [self _poll];
-    }
+    [self _setUpObservingNotifications];
+    [self _startPolling];
 }
 
 - (void)stop
 {
-    self.polling = NO;
+    [self _startPolling];
+    [self _tearDownObservingNotifications];
 }
 
 - (void)fireCompletionsWithSuccessful:(BOOL)successful response:(NSURLResponse *)response responseObject:(id)responseObject error:(NSError *)error
@@ -74,6 +70,26 @@
     }
 }
 
+- (void)_startPolling
+{
+    if (! self.isPolling) {
+        self.polling = YES;
+        
+        if (self.finished)
+        {
+            self.finished = NO;
+            [self _poll];
+        }
+    }
+}
+
+- (void)_stopPolling
+{
+    if (self.isPolling) {
+        self.polling = NO;
+    }
+}
+
 - (void)_poll
 {
     __weak typeof(self) that = self;
@@ -86,6 +102,30 @@
 - (NSTimer *)_timerForPolling
 {
     return [NSTimer scheduledTimerWithTimeInterval:self.interval target:self selector:@selector(_poll) userInfo:nil repeats:NO];
+}
+
+#pragma mark - Notifications
+
+- (void)_setUpObservingNotifications
+{
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationDidEnterBackground) name:UIApplicationDidEnterBackgroundNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(_applicationWillEnterForeground) name:UIApplicationWillEnterForegroundNotification object:nil];
+}
+
+- (void)_tearDownObservingNotifications
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationWillResignActiveNotification object:nil];
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:UIApplicationDidBecomeActiveNotification object:nil];
+}
+
+- (void)_applicationDidEnterBackground
+{
+    [self _stopPolling];
+}
+
+- (void)_applicationWillEnterForeground
+{
+    [self _startPolling];
 }
 
 @end

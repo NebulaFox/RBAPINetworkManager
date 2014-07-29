@@ -150,10 +150,20 @@ static NSString * const RBAPICompletionBlockKey = @"completion";
 - (void)startPollingRequests
 {
     __weak typeof(self) that = self;
-    dispatch_async(that.queue, ^{
+    dispatch_barrier_async(that.queue, ^{
         [that.pollingRequests enumerateObjectsUsingBlock:^(RBAPIPoller * obj, NSUInteger idx, BOOL *stop) {
             [obj start];
         }];
+    });
+}
+
+- (void)stopPollingRequests
+{
+    __weak typeof(self) that = self;
+    dispatch_barrier_async(that.queue, ^{
+       [that.pollingRequests enumerateObjectsUsingBlock:^(RBAPIPoller * obj, NSUInteger idx, BOOL *stop) {
+           [obj stop];
+       }];
     });
 }
 
